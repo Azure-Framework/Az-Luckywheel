@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Diamond Casino – Slots Notifications</title>
+  <style>
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: transparent;              /* keep game visible */
+  font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Root container – middle left notification stack */
+.slots-root {
+  position: fixed;
+  top: 50%;
+  left: 3vw;
+  transform: translateY(-50%);         /* vertically center */
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  pointer-events: none;                /* don't block game input */
+  z-index: 9999;
+}
+
+/* Base notification card */
+.slot-toast {
+  min-width: 260px;
+  max-width: 340px;
+  padding: 12px 16px 14px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.15), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(255,105,180,0.22), transparent 60%),
+    linear-gradient(135deg, rgba(4, 4, 16, 0.94), rgba(18, 5, 40, 0.96));
+
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+
+  animation: slot-enter 0.32s ease-out forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Soft highlight bar on the left */
+.slot-toast::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, #ff9bf2, #ffd4ff);
+  opacity: 0.75;
+}
+
+/* Icon circle */
+.slot-icon {
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 20%, #ffffff, #ffe5ff 35%, #ff8ddc 80%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #5b0f72;
+}
+
+/* Content text */
+.slot-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.slot-heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.slot-title {
+  font-family: 'Pacifico', cursive;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.9),
+    0 0 16px rgba(255, 160, 255, 0.9);
+}
+
+.slot-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.2);
+}
+
+.slot-mainline {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.slot-details {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+/* Amount badge at bottom right */
+.slot-amount {
+  margin-top: 4px;
+  align-self: flex-end;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Type colors --------------------------------------------------- */
+
+.slot-toast--win .slot-pill {
+  border-color: #6bffb0;
+  color: #c7ffe1;
+}
+
+.slot-toast--win .slot-amount {
+  color: #8cffc1;
+}
+
+.slot-toast--loss .slot-pill {
+  border-color: #ff8484;
+  color: #ffd2d2;
+}
+
+.slot-toast--loss .slot-amount {
+  color: #ff9b9b;
+}
+
+.slot-toast--jackpot {
+  border-color: rgba(255, 230, 140, 0.95);
+  box-shadow:
+    0 0 22px rgba(255,230,140,0.9),
+    0 0 42px rgba(255,160,255,0.7),
+    0 22px 52px rgba(0,0,0,0.9);
+}
+
+.slot-toast--jackpot::before {
+  background: linear-gradient(to bottom, #ffe97b, #ff8df5);
+}
+
+.slot-toast--jackpot .slot-icon {
+  background: radial-gradient(circle at 30% 20%, #fff6ce, #ffd966 40%, #ff7fd5 85%);
+  color: #5b0f00;
+}
+
+.slot-toast--jackpot .slot-pill {
+  border-color: #ffe97b;
+  color: #fffbe2;
+}
+
+.slot-toast--jackpot .slot-title {
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 1),
+    0 0 20px rgba(255, 235, 150, 1),
+    0 0 40px rgba(255, 160, 255, 1);
+}
+
+.slot-toast--jackpot .slot-amount {
+  color: #ffe97b;
+}
+
+/* Rules variant */
+.slot-toast--rules::before {
+  background: linear-gradient(to bottom, #7be3ff, #9b8dff);
+}
+
+.slot-toast--rules .slot-icon {
+  background: radial-gradient(circle at 30% 20%, #e7f7ff, #7be3ff 45%, #9b8dff 85%);
+  color: #041b2f;
+}
+
+.slot-toast--rules .slot-pill {
+  border-color: #7be3ff;
+  color: #d6f5ff;
+}
+
+.slot-toast--rules .slot-title {
+  text-shadow:
+    0 0 8px rgba(200, 240, 255, 1),
+    0 0 20px rgba(123, 227, 255, 0.9);
+}
+
+/* Enter / leave animations – slide IN from left, OUT to left */
+@keyframes slot-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slot-exit {
+  to {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+}
+
+/* When we mark as closing */
+.slot-toast--closing {
+  animation: slot-exit 0.28s ease-in forwards;
+}
+  </style>
+
+  <!-- Script font to mimic Diamond logo + clean sans -->
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="slots-root" class="slots-root">
+    <!-- Notifications get injected here -->
+  </div>
+
+<script>
+  const root = document.getElementById('slots-root');
+
+  // how long each notification stays (ms)
+  const LIFETIME = 6000;
+
+  // small helper for money formatting
+  function formatMoney(amount) {
+    amount = Number(amount) || 0;
+    const sign = amount < 0 ? '-' : '';
+    const v = Math.abs(Math.floor(amount));
+    return `${sign}$${v.toLocaleString()}`;
+  }
+
+  function makeToast(data) {
+    const {
+      type,
+      bet,
+      amount,
+      multiplier,
+      details,
+      message,        // optional custom message from Lua
+      balanceChange,  // optional explicit balance delta
+    } = data;
+
+    const toast = document.createElement('div');
+    toast.className = `slot-toast slot-toast--${type || 'win'}`;
+
+    const icon = document.createElement('div');
+    icon.className = 'slot-icon';
+
+    if (type === 'loss') {
+      icon.textContent = '✖';
+    } else if (type === 'jackpot') {
+      icon.textContent = '♦';
+    } else {
+      icon.textContent = '★';
+    }
+
+    const text = document.createElement('div');
+    text.className = 'slot-text';
+
+    const headingRow = document.createElement('div');
+    headingRow.className = 'slot-heading-row';
+
+    const title = document.createElement('div');
+    title.className = 'slot-title';
+
+    if (type === 'jackpot') {
+      title.textContent = 'JACKPOT!';
+    } else {
+      // generic “Diamond” label works for both slots + wheel
+      title.textContent = 'The Diamond';
+    }
+
+    const pill = document.createElement('div');
+    pill.className = 'slot-pill';
+    if (type === 'loss') pill.textContent = 'NO LUCK';
+    else if (type === 'jackpot') pill.textContent = 'JACKPOT';
+    else pill.textContent = 'WIN';
+
+    headingRow.appendChild(title);
+    headingRow.appendChild(pill);
+
+    const mainline = document.createElement('div');
+    mainline.className = 'slot-mainline';
+
+    const hasBet = !!(bet && bet > 0);
+    const firstDetail = Array.isArray(details) && details.length > 0 ? details[0] : '';
+
+    // ---------- MAIN TEXT ----------
+    if (!hasBet) {
+      // 🧷 No bet (Lucky Wheel / info toasts)
+      if (message) {
+        // if Lua sends a custom message, just use it
+        mainline.textContent = message;
+      } else if (type === 'loss') {
+        // e.g. cooldown / not enough money
+        mainline.textContent =
+          firstDetail || 'Lucky Wheel: No reward this time.';
+      } else if (type === 'jackpot') {
+        mainline.textContent =
+          firstDetail ||
+          `Lucky Wheel: JACKPOT – ${formatMoney(amount || 0)}!`;
+      } else {
+        // generic wheel win
+        mainline.textContent =
+          firstDetail ||
+          `Lucky Wheel: You received ${formatMoney(amount || 0)}.`;
+      }
+    } else {
+      // 🎰 Regular slots behaviour (with bet)
+      if (type === 'loss') {
+        mainline.textContent = `You lost ${formatMoney(bet || 0)}.`;
+      } else if (type === 'jackpot') {
+        mainline.textContent = `You hit the jackpot for ${formatMoney(amount || 0)}!`;
+      } else {
+        mainline.textContent = `You won ${formatMoney(amount || 0)} on a ${formatMoney(bet || 0)} spin.`;
+      }
+    }
+
+    const detailsLine = document.createElement('div');
+    detailsLine.className = 'slot-details';
+
+    const parts = [];
+    if (multiplier && multiplier > 0) {
+      parts.push(`Payout x${multiplier.toFixed(1)}`);
+    }
+    if (Array.isArray(details) && details.length > 0) {
+      parts.push(details.join(' • '));
+    }
+
+    detailsLine.textContent = parts.join(' | ');
+
+    const amountBadge = document.createElement('div');
+    amountBadge.className = 'slot-amount';
+
+    // ---------- BALANCE TEXT ----------
+    if (typeof balanceChange === 'number') {
+      // allow Lua to fully control what the balance delta is
+      amountBadge.textContent = `Balance change: ${formatMoney(balanceChange)}`;
+    } else if (!hasBet) {
+      // no bet (wheel) – just show the prize amount or 0
+      amountBadge.textContent = `Balance change: ${formatMoney(amount || 0)}`;
+    } else if (type === 'loss') {
+      amountBadge.textContent = `Balance change: ${formatMoney(-Math.abs(bet || 0))}`;
+    } else {
+      amountBadge.textContent = `Balance change: ${formatMoney(amount || 0)}`;
+    }
+
+    text.appendChild(headingRow);
+    text.appendChild(mainline);
+    if (detailsLine.textContent) {
+      text.appendChild(detailsLine);
+    }
+    text.appendChild(amountBadge);
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
+
+    // Closing timeout
+    setTimeout(() => {
+      toast.classList.add('slot-toast--closing');
+      setTimeout(() => toast.remove(), 280);
+    }, LIFETIME);
+
+    return toast;
+  }
+
+  function makeRulesToast(data) {
+    const titleText = data.title || 'The Diamond – Slot Rules';
+    const lines     = Array.isArray(data.lines) ? data.lines : [];
+
+    const toast = document.createElement('div');
+    toast.className = 'slot-toast slot-toast--rules';
+
+    const icon = document.createElement('div');
+    icon.className = 'slot-icon';
+    icon.textContent = 'ℹ';
+
+    const text = document.createElement('div');
+    text.className = 'slot-text';
+
+    const headingRow = document.createElement('div');
+    headingRow.className = 'slot-heading-row';
+
+    const title = document.createElement('div');
+    title.className = 'slot-title';
+    title.textContent = titleText;
+
+    const pill = document.createElement('div');
+    pill.className = 'slot-pill';
+    pill.textContent = 'RULES';
+
+    headingRow.appendChild(title);
+    headingRow.appendChild(pill);
+
+    const mainline = document.createElement('div');
+    mainline.className = 'slot-mainline';
+    mainline.textContent = 'Payout overview & controls:';
+
+    const details = document.createElement('div');
+    details.className = 'slot-details';
+
+    if (lines.length > 0) {
+      const ul = document.createElement('ul');
+      ul.style.paddingLeft = '16px';
+      ul.style.marginTop = '4px';
+      lines.forEach(line => {
+        const li = document.createElement('li');
+        li.textContent = line;
+        ul.appendChild(li);
+      });
+      details.appendChild(ul);
+    }
+
+    text.appendChild(headingRow);
+    text.appendChild(mainline);
+    if (lines.length > 0) {
+      text.appendChild(details);
+    }
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
+
+    setTimeout(() => {
+      toast.classList.add('slot-toast--closing');
+      setTimeout(() => toast.remove(), 280);
+    }, LIFETIME);
+
+    return toast;
+  }
+
+  function pushToast(data) {
+    const toast = makeToast(data);
+    root.insertBefore(toast, root.firstChild || null);
+  }
+
+  function pushRulesToast(data) {
+    const toast = makeRulesToast(data);
+    root.insertBefore(toast, root.firstChild || null);
+  }
+
+  // NUI listener from client.lua
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || !data.action) return;
+
+    if (data.action === 'slots_notify') {
+      pushToast(data);
+    } else if (data.action === 'slots_rules') {
+      pushRulesToast(data);
+    }
+  });
+</script>
+
+</body>
+</html>
